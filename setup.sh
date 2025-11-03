@@ -21,7 +21,7 @@ if [ ! -f .env ]; then
     echo "📝 Creating .env file..."
     cat > .env << EOF
 # Gemini API Configuration
-GEMINI_API_KEY=AIzaSyBqmmp0ikxAI9jKk4TKbEyR6sAlyveyhiU
+GEMINI_API_KEY=""
 
 # Database Configuration
 DATABASE_URL=sqlite:///./database.db
