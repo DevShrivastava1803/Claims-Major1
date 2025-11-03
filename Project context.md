@@ -1,6 +1,6 @@
 ---
 
-## 🧠 **Project Context and Detailed Description**
+## 🧠 **Project Context and Detailed Description**    
 
 ### **Project Title:**
 
