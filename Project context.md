@@ -1,7 +1,6 @@
 ---
 
-## 🧠 **Project Context and Detailed Description**    
-
+## 🧠 **Project Context and Detailed Description**
 ### **Project Title:**
 
 **Insurance Claim Analysis System — An AI-Powered Document Understanding Platform**
