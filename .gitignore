@@ -1,0 +1,51 @@
+# Root Git Ignore for Backend and Frontend
+
+# OS / Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python (Backend)
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Environment & Secrets
+.env
+Backend/.env
+Frontend/.env
+*.key
+*.pem
+
+# Backend data & artifacts
+Backend/database.db
+Backend/uploads/
+Backend/vector_db/
+Backend/reports/
+Backend/data/
+
+# Node (Frontend)
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.cache/
+
+# Logs
+*.log
+logs/
+
+# Docker
+**/.dockerignore
+**/.env.docker
+
+# TraeAI / Temp
+**/.bolt/**
+**/*.tmp
+**/*.swp

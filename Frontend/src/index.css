@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 0 0 0;
+    --color-secondary: 131 151 136;
+    --color-accent: 191 215 234;
+    --color-support: 186 168 152;
+    --color-background: 238 224 203;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-background text-primary antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  h1 {
+    @apply text-4xl font-bold leading-tight tracking-tight;
+    line-height: 1.2;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold leading-tight;
+    line-height: 1.2;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+
+  h4 {
+    @apply text-xl font-medium;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  .btn-primary {
+    @apply bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-secondary/90 hover:scale-105 focus-ring;
+  }
+
+  .btn-secondary {
+    @apply bg-support text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-support/90 hover:scale-105 focus-ring;
+  }
+
+  .btn-outline {
+    @apply border-2 border-secondary text-secondary px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:bg-secondary hover:text-white focus-ring;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-xl;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-300 focus-ring transition-all duration-200;
+  }
+
+  .gradient-background {
+    background: linear-gradient(135deg, #EEE0CB 0%, #BFD7EA 100%);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

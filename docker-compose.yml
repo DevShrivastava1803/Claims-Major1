@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: ./Backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=sqlite:///./database.db
+    volumes:
+      - ./Backend/uploads:/app/uploads
+      - ./Backend/vector_db:/app/vector_db
+      - ./Backend/reports:/app/reports
+      - ./Backend/data:/app/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./Frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
