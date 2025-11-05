@@ -26,7 +26,7 @@ app.add_middleware(
         "http://frontend:3000",
 
         # Render frontend domain
-        "https://claims-major1.onrender.com",
+        "https://claims-major1-frontend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
