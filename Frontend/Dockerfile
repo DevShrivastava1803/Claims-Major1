@@ -28,18 +28,24 @@ RUN apk add --no-cache gettext
 
 # Safe local fallback
 ENV API_URL=http://backend:8000
+ENV PORT=3000
 
 EXPOSE 3000
 
-# Substitute only ${API_URL} (leave all $nginx_vars intact), validate config, then start nginx
+# Substitute only ${API_URL} and ${PORT} (leave Nginx $vars intact), validate config, then start nginx
 CMD sh -c '\
   if [ -z "$API_URL" ]; then \
     echo "⚠️  API_URL not set, defaulting to http://backend:8000"; \
     export API_URL=http://backend:8000; \
   fi; \
+  if [ -z "$PORT" ]; then \
+    echo "🔧 PORT not set, defaulting to 3000"; \
+    export PORT=3000; \
+  fi; \
   echo "✅ Using API_URL=$API_URL"; \
-  # Replace only ${API_URL} in the template and leave Nginx $variables intact \
-  envsubst '\''${API_URL}'\'' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf; \
+  echo "✅ Using PORT=$PORT"; \
+  # Replace only ${API_URL} and ${PORT} in the template and leave Nginx $variables intact \
+  envsubst '\''${API_URL} ${PORT}'\'' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf; \
   echo "------ Rendered NGINX config ------"; \
   cat /etc/nginx/conf.d/default.conf; \
   echo "-----------------------------------"; \
