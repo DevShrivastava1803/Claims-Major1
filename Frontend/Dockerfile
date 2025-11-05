@@ -1,6 +1,7 @@
 # Build stage
 FROM node:20-slim as build
 
+# Set working directory
 WORKDIR /app
 
 ARG VITE_API_BASE_URL=/api

@@ -32,6 +32,13 @@ Backend/vector_db/
 Backend/reports/
 Backend/data/
 
+# Root-level local artifacts
+uploads/
+vector_db/
+.devdbrc
+**/*.sqlite3
+**/*.bin
+
 # Node (Frontend)
 Frontend/node_modules/
 Frontend/dist/
