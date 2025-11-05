@@ -1,18 +1,22 @@
 # Build stage
-FROM node:18-slim as build
+FROM node:20-slim as build
 
 WORKDIR /app
+
+# Build-time API base (defaults to Nginx proxy path)
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (resolve cross-platform binaries on Linux)
+RUN npm install --no-audit --no-fund
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application with the provided API base
 RUN npm run build
 
 # Production stage

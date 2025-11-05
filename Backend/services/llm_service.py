@@ -38,6 +38,7 @@ class LLMService:
     def __init__(self):
         """Initialize the LLM and embedding model with fallback to mock mode."""
         self.is_mock = GEMINI_API_KEY == "mock_key"
+        self.last_raw_output = None
 
         if not self.is_mock:
             try:
@@ -87,8 +88,11 @@ class LLMService:
     # --------------------------
     # CLAIM ANALYSIS
     # --------------------------
-    def analyze_claim(self, query: str, relevant_clauses: List[str]) -> Dict:
-        """Analyze the insurance claim based on relevant policy clauses."""
+    def analyze_claim(self, query: str, retrieved_context: str, derived_references: List[str] | None = None) -> Dict:
+        """Analyze the insurance claim using optimized RAG prompt.
+        - retrieved_context: concatenated context from top retrieved chunks
+        - derived_references: metadata-derived references (section/page)
+        """
         if self.llm is None and not self.is_mock:
             print("[WARN] LLM not initialized, attempting to reinitialize...")
             try:
@@ -110,18 +114,27 @@ class LLMService:
                 "reference_clauses": ["clause_1", "clause_2"],
             }
 
-        prompt = f"""
-        Given the insurance claim query: {query}
-        And the following relevant policy clauses:
-        {' '.join(relevant_clauses)}
+        if derived_references is None:
+            derived_references = []
 
-        Analyze if the claim should be approved or rejected based on the policy clauses.
-        Return ONLY a valid JSON response in the following format:
+        prompt = f"""
+        You are an expert insurance claim analyst.
+        Based on the policy text provided below, answer the user's question accurately.
+        If the context is incomplete, use reasoning to infer the likely answer but clearly mention any uncertainty.
+
+        ---
+        Policy Context:
+        {retrieved_context}
+        ---
+        User Question:
+        {query}
+        ---
+        Return a JSON object with:
         {{
-            "decision": "approved/rejected",
-            "amount": "optional amount if approved",
-            "justification": "brief explanation of the decision",
-            "reference_clauses": ["list of relevant clause numbers"]
+          "decision": "approved/rejected/uncertain",
+          "amount": "optional",
+          "justification": "detailed explanation",
+          "reference_clauses": ["if any specific section or clause is mentioned"]
         }}
         """
 
@@ -152,6 +165,8 @@ class LLMService:
                 response_text = response if isinstance(response, str) else str(response)
 
             print("[INFO] Raw response received from Gemini.")
+            # cache raw output for logging/debugging
+            self.last_raw_output = response_text
 
             # Extract JSON safely
             match = re.search(r"\{.*\}", response_text, re.DOTALL)
@@ -162,14 +177,15 @@ class LLMService:
             else:
                 print("[WARN] No JSON found in response. Using fallback.")
                 result = {
-                    "decision": "rejected",
+                    "decision": "uncertain",
                     "amount": None,
-                    "justification": "No valid JSON found in model output.",
-                    "reference_clauses": [],
+                    "justification": "No valid JSON found in model output; providing best-effort reasoning based on context.",
+                    "reference_clauses": derived_references,
                 }
 
         except json.JSONDecodeError as e:
             print(f"[ERROR] Failed to parse JSON: {e}")
+            self.last_raw_output = None
             result = {
                 "decision": "rejected",
                 "amount": None,
@@ -181,6 +197,7 @@ class LLMService:
             print(f"[ERROR] Claim analysis failed: {e}")
             print("[WARN] Switching to mock mode for fallback.")
             self.is_mock = True
+            self.last_raw_output = None
             result = {
                 "decision": "approved",
                 "amount": "1000.00",
@@ -188,10 +205,19 @@ class LLMService:
                 "reference_clauses": ["clause_1", "clause_2"],
             }
 
+        # Merge reference clauses with derived ones
+        refs = result.get("reference_clauses", []) or []
+        merged_refs = []
+        seen = set()
+        for r in list(refs) + list(derived_references or []):
+            if r and r not in seen:
+                seen.add(r)
+                merged_refs.append(r)
+        result["reference_clauses"] = merged_refs
+
         # Safety checks
-        result.setdefault("decision", "rejected")
+        result.setdefault("decision", "uncertain")
         result.setdefault("justification", "Analysis incomplete")
-        result.setdefault("reference_clauses", [])
         result["amount"] = str(result.get("amount")) if result.get("amount") else None
 
         print(f"[INFO] Final decision: {result['decision']}")

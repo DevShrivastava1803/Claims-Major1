@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./Backend
+    build:
+      context: ./Backend
+    image: claim-backend:latest
     ports:
       - "8000:8000"
     environment:
@@ -11,20 +13,36 @@ services:
       - ./Backend/vector_db:/app/vector_db
       - ./Backend/reports:/app/reports
       - ./Backend/data:/app/data
+      - ./Backend/database.db:/app/database.db
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/api/health'); sys.exit(0)\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   frontend:
-    build: ./Frontend
+    build:
+      context: ./Frontend
+      args:
+        VITE_API_BASE_URL: /api
+    image: claim-frontend:latest
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_API_BASE_URL=/api
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
 networks:

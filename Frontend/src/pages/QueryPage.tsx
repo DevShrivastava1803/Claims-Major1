@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, CheckCircle, XCircle, DollarSign, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Send, CheckCircle, XCircle, DollarSign, ChevronDown, ChevronUp, Sparkles, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery } from '../hooks/useQuery';
 import { supabaseService } from '../services/supabase';
@@ -197,16 +197,20 @@ export const QueryPage = () => {
 
                   <div>
                     <h4 className="font-semibold text-lg mb-3">Justification</h4>
-                    <p className="text-gray-700 leading-relaxed">{result.justification}</p>
+                    <div className="space-y-3 text-gray-700 leading-relaxed">
+                      {toParagraphs(result.justification).map((p, i) => (
+                        <p key={i}>{p}</p>
+                      ))}
+                    </div>
                   </div>
 
-                  {result.policy_clauses && result.policy_clauses.length > 0 && (
+                  {(result.reference_details && result.reference_details.length > 0) || (result.policy_clauses && result.policy_clauses.length > 0) ? (
                     <div>
                       <button
                         onClick={() => setExpandedClauses(!expandedClauses)}
                         className="flex items-center justify-between w-full text-left font-semibold text-lg mb-3 hover:text-secondary transition-colors"
                       >
-                        <span>Referenced Policy Clauses ({result.policy_clauses.length})</span>
+                        <span>Referenced Policy Clauses ({(result.reference_details?.length || result.policy_clauses.length)})</span>
                         {expandedClauses ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                       </button>
 
@@ -218,16 +222,29 @@ export const QueryPage = () => {
                             exit={{ height: 0, opacity: 0 }}
                             className="space-y-2 overflow-hidden"
                           >
-                            {result.policy_clauses.map((clause, index) => (
-                              <div key={index} className="p-3 bg-accent/20 rounded-lg border border-accent">
-                                <p className="text-sm text-gray-700">{clause}</p>
-                              </div>
-                            ))}
+                            {(result.reference_details && result.reference_details.length > 0
+                              ? result.reference_details.map((d, index) => (
+                                  <div key={index} className="p-4 bg-accent/20 rounded-lg border border-accent">
+                                    <div className="flex items-start justify-between">
+                                      <p className="font-medium">{d.label}</p>
+                                      <button className="text-xs text-secondary hover:underline flex items-center gap-1" onClick={() => copyText(`${d.label}: ${d.snippet}`)}>
+                                        <Copy size={14} /> Copy
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700 mt-2">{d.snippet}</p>
+                                  </div>
+                                ))
+                              : result.policy_clauses.map((clause, index) => (
+                                  <div key={index} className="p-3 bg-accent/20 rounded-lg border border-accent">
+                                    <p className="text-sm text-gray-700">{clause}</p>
+                                  </div>
+                                ))
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
-                  )}
+                  ) : null}
                 </CardContent>
               </Card>
             </motion.div>
@@ -272,3 +289,18 @@ export const QueryPage = () => {
     </div>
   );
 };
+  const toParagraphs = (text: string) => {
+    try {
+      const parts = text.split(/(?<=\.)\s+/).filter(Boolean);
+      return parts.length > 1 ? parts : [text];
+    } catch {
+      return [text];
+    }
+  };
+
+  const copyText = (text: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      toast.success('Copied');
+    } catch {}
+  };

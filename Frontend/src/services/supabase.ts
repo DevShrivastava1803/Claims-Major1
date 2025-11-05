@@ -3,32 +3,32 @@ import type { Document, Query } from '../types';
 
 export const supabaseService = {
   async createDocument(data: Omit<Document, 'id' | 'uploaded_at'>) {
-    const res = await apiClient.post('/api/documents', data);
+    const res = await apiClient.post('/documents', data);
     return res.data;
   },
 
   async getDocuments(): Promise<Document[]> {
-    const res = await apiClient.get('/api/documents');
+    const res = await apiClient.get('/documents');
     return res.data;
   },
 
   async getDocumentById(id: string): Promise<Document | null> {
-    const res = await apiClient.get(`/api/documents/${id}`);
+    const res = await apiClient.get(`/documents/${id}`);
     return res.data;
   },
 
   async updateDocument(id: string, updates: Partial<Document>) {
-    const res = await apiClient.put(`/api/documents/${id}`, updates);
+    const res = await apiClient.put(`/documents/${id}`, updates);
     return res.data;
   },
 
   async deleteDocument(id: string) {
-    const res = await apiClient.delete(`/api/documents/${id}`);
+    const res = await apiClient.delete(`/documents/${id}`);
     return res.data;
   },
 
   async createQuery(data: Omit<Query, 'id' | 'created_at'>) {
-    const res = await apiClient.post('/api/queries', data);
+    const res = await apiClient.post('/queries', data);
     const r: any = res.data;
     return {
       id: r.id?.toString(),
@@ -43,7 +43,7 @@ export const supabaseService = {
   },
 
   async getQueriesByDocument(documentId: string): Promise<Query[]> {
-    const res = await apiClient.get(`/api/documents/${documentId}/queries`);
+    const res = await apiClient.get(`/documents/${documentId}/queries`);
     const rows: any[] = res.data || [];
     // Map backend fields to frontend Query type
     return rows.map((r) => ({
@@ -59,7 +59,7 @@ export const supabaseService = {
   },
 
   async getAnalytics() {
-    const res = await apiClient.get('/api/queries');
+    const res = await apiClient.get('/queries');
     const data: any[] = res.data || [];
     const analytics = {
       total_claims: data.length,

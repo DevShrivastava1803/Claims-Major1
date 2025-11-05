@@ -1,10 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from services.retrieval_service import build_text_splitter, guess_section_name
 import chromadb
 import os
 import shutil
 from services.llm_service import LLMService
+from chromadb.config import Settings
 from services.db_service import create_document, update_document, get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
@@ -13,8 +15,8 @@ import aiofiles
 router = APIRouter()
 llm_service = LLMService()
 
-# Initialize ChromaDB
-client = chromadb.PersistentClient(path="./vector_db/chroma")
+# Initialize ChromaDB (disable anonymized telemetry to avoid PostHog atexit issues)
+client = chromadb.PersistentClient(path="./vector_db/chroma", settings=Settings(anonymized_telemetry=False))
 collection = client.get_or_create_collection(name="insurance_policies")
 
 @router.post("/process-pdf")
@@ -39,24 +41,32 @@ async def process_pdf(file: UploadFile = File(...), db: Session = Depends(get_db
         loader = PyPDFLoader(file_path)
         pages = loader.load()
 
-        # Split text into chunks
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            separators=["\n\n", "\n", " ", ""]
-        )
+        # Split text into chunks (updated overlap)
+        text_splitter = build_text_splitter()
         chunks = text_splitter.split_documents(pages)
 
-        # Process chunks and store in ChromaDB
+        # Process chunks and store in ChromaDB with metadata
         texts = [chunk.page_content for chunk in chunks]
         embeddings = llm_service.get_embeddings(texts)
 
         # Add to ChromaDB with unique IDs to avoid duplicate insert errors on re-uploads
         unique_prefix = f"doc{doc.id}_{int(datetime.now(timezone.utc).timestamp())}"
-        for i, (text, embedding) in enumerate(zip(texts, embeddings)):
+        for i, (text, embedding, chunk) in enumerate(zip(texts, embeddings, chunks)):
+            # Build metadata without None values (Chroma rejects None in metadatas)
+            meta = {
+                "doc_id": doc.id,
+                "chunk_index": i,
+            }
+            page_num = chunk.metadata.get("page")
+            if page_num is not None:
+                meta["page_number"] = page_num
+            section = guess_section_name(text)
+            if section:
+                meta["section_name"] = section
             collection.add(
                 documents=[text],
                 embeddings=[embedding],
+                metadatas=[meta],
                 ids=[f"{unique_prefix}_chunk_{i}"]
             )
 

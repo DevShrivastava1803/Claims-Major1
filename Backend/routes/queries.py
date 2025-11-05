@@ -10,7 +10,9 @@ def create_q(payload: dict, db: Session = Depends(get_db)):
     document_id = payload.get('document_id')
     query_text = payload.get('query_text')
     response = payload.get('response')
-    q = create_query(db, document_id=document_id, query_text=query_text, response=response)
+    raw_context = payload.get('raw_context')
+    raw_response = payload.get('raw_response')
+    q = create_query(db, document_id=document_id, query_text=query_text, response=response, raw_context=raw_context, raw_response=raw_response)
     return {"id": q.id, "document_id": q.document_id, "query_text": q.query, "decision": q.decision, "amount": q.amount, "justification": q.justification, "reference_clauses": q.reference_clauses, "timestamp": q.timestamp.isoformat()}
 
 

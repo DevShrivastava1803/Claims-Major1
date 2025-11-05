@@ -1,12 +1,14 @@
 fastapi==0.120.4
+httpx==0.27.0
 uvicorn==0.38.0
 python-multipart==0.0.20
 
 # ✅ LangChain + Google GenAI stack (v1 API)
-langchain==0.3.7
-langchain-core==0.3.14
-langchain-community==0.3.7
-langchain-google-genai==2.1.9
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-text-splitters
 google-generativeai==0.8.3
 
 # ✅ Vector + Database

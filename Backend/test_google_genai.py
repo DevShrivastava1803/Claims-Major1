@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import os
 
+# Use environment-provided key; do not hardcode secrets
 os.environ["GOOGLE_API_KEY"] = ""
 
 try:

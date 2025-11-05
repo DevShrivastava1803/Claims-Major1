@@ -17,6 +17,8 @@ export interface Query {
   claim_amount?: number;
   justification: string;
   policy_clauses: string[];
+  // Rich clause details, when available for current session result
+  reference_details?: { label: string; snippet: string }[];
   created_at: string;
 }
 
@@ -26,6 +28,7 @@ export interface BackendQueryResponse {
   amount?: string | number | null;
   justification: string;
   reference_clauses: string[];
+  reference_details?: { label: string; snippet: string }[];
 }
 
 export interface AnalyticsData {

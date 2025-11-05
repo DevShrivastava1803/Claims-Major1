@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON, Text, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -38,6 +39,8 @@ class QueryLog(Base):
     amount = Column(String, nullable=True)
     justification = Column(String)
     reference_clauses = Column(JSON)
+    raw_context = Column(Text, nullable=True)
+    raw_response = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 
@@ -67,6 +70,17 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ---------------------------
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Ensure new columns exist on older SQLite databases
+    try:
+        with engine.connect() as conn:
+            cols = [row[1] for row in conn.execute(text("PRAGMA table_info(queries)")).fetchall()]
+            if "raw_context" not in cols:
+                conn.execute(text("ALTER TABLE queries ADD COLUMN raw_context TEXT"))
+            if "raw_response" not in cols:
+                conn.execute(text("ALTER TABLE queries ADD COLUMN raw_response TEXT"))
+    except Exception:
+        # If PRAGMA/ALTER fails, proceed; inserts will fallback in helpers
+        pass
 
 
 def get_db():
@@ -77,18 +91,34 @@ def get_db():
         db.close()
 
 
-def log_query(db, query: str, response: dict):
-    query_log = QueryLog(
-        query=query,
-        decision=response["decision"],
-        amount=response.get("amount"),
-        justification=response["justification"],
-        reference_clauses=response["reference_clauses"]
-    )
-    db.add(query_log)
-    db.commit()
-    db.refresh(query_log)
-    return query_log
+def log_query(db, query: str, response: dict, raw_context: str | None = None, raw_response: str | None = None):
+    try:
+        query_log = QueryLog(
+            query=query,
+            decision=response.get("decision"),
+            amount=response.get("amount"),
+            justification=response.get("justification"),
+            reference_clauses=response.get("reference_clauses", []),
+            raw_context=raw_context,
+            raw_response=raw_response,
+        )
+        db.add(query_log)
+        db.commit()
+        db.refresh(query_log)
+        return query_log
+    except SQLAlchemyError:
+        # Fallback if schema is older (without new columns)
+        query_log = QueryLog(
+            query=query,
+            decision=response.get("decision"),
+            amount=response.get("amount"),
+            justification=response.get("justification"),
+            reference_clauses=response.get("reference_clauses", []),
+        )
+        db.add(query_log)
+        db.commit()
+        db.refresh(query_log)
+        return query_log
 
 
 def get_recent_queries(db, limit: int = 10):
@@ -143,19 +173,35 @@ def delete_document(db, doc_id: int):
 # ---------------------------
 # ✅ Query Helpers
 # ---------------------------
-def create_query(db, document_id: int | None, query_text: str, response: dict):
-    q = QueryLog(
-        document_id=str(document_id) if document_id is not None else None,
-        query=query_text,
-        decision=response.get('decision'),
-        amount=response.get('amount'),
-        justification=response.get('justification'),
-        reference_clauses=response.get('reference_clauses', []),
-    )
-    db.add(q)
-    db.commit()
-    db.refresh(q)
-    return q
+def create_query(db, document_id: int | None, query_text: str, response: dict, raw_context: str | None = None, raw_response: str | None = None):
+    try:
+        q = QueryLog(
+            document_id=str(document_id) if document_id is not None else None,
+            query=query_text,
+            decision=response.get('decision'),
+            amount=response.get('amount'),
+            justification=response.get('justification'),
+            reference_clauses=response.get('reference_clauses', []),
+            raw_context=raw_context,
+            raw_response=raw_response,
+        )
+        db.add(q)
+        db.commit()
+        db.refresh(q)
+        return q
+    except SQLAlchemyError:
+        q = QueryLog(
+            document_id=str(document_id) if document_id is not None else None,
+            query=query_text,
+            decision=response.get('decision'),
+            amount=response.get('amount'),
+            justification=response.get('justification'),
+            reference_clauses=response.get('reference_clauses', []),
+        )
+        db.add(q)
+        db.commit()
+        db.refresh(q)
+        return q
 
 
 def get_queries_by_document(db, document_id: int):

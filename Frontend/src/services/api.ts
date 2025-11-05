@@ -7,7 +7,7 @@ export const apiService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await apiClient.post('/api/process-pdf', formData, {
+    const response = await apiClient.post('/process-pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -24,12 +24,12 @@ export const apiService = {
 
   // Keep helper for processing a remote PDF URL (if backend supports later)
   processPdfUrl: async (pdfUrl: string) => {
-    const response = await apiClient.post('/api/process-pdf', { pdf_url: pdfUrl });
+    const response = await apiClient.post('/process-pdf', { pdf_url: pdfUrl });
     return response.data;
   },
 
   queryDocument: async (query: string): Promise<BackendQueryResponse> => {
-    const response = await apiClient.get('/api/query', {
+    const response = await apiClient.get('/query', {
       params: { query },
     });
     return response.data;

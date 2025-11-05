@@ -24,6 +24,7 @@ export const useQuery = () => {
         claim_amount: queryResult.amount || null,
         justification: queryResult.justification,
         policy_clauses: queryResult.reference_clauses || [],
+        reference_details: queryResult.reference_details || [],
         query_text: queryText,
       } as any;
 
