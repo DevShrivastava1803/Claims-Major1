@@ -18,11 +18,13 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install --prefer-binary -r re
 # Copy application code
 COPY . .
 
-# Create necessary directories
+# Create necessary directories for persistent data
 RUN mkdir -p uploads vector_db/chroma reports
 
-# Expose port
-EXPOSE 8000
+# Expose the dynamic port used by Render (defaults to 8000 for local runs)
+ENV PORT=8000
+EXPOSE $PORT
 
-# Start the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the FastAPI server using Render's assigned port
+# The ${PORT} variable ensures compatibility with Render's environment
+CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
