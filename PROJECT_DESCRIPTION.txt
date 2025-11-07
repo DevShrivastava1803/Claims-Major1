@@ -1,0 +1,122 @@
+Claims-Major1 — Project Description (for project report and AI assistants)
+
+Summary
+- Purpose: Upload documents, index them for retrieval, ask questions, and generate reports using an LLM.
+- Stack: FastAPI (Python) backend, React + Vite frontend, Nginx for static serving and proxy, SQLite for metadata, file storage for uploads, Chroma-like vector index, Google Gemini LLM.
+- Deployment: Works locally via Docker Compose; deploys on Render as two web services (frontend and backend).
+
+Goals and User Value
+- Accept uploaded PDFs and other files.
+- Extract and store content and metadata.
+- Build a vector index to retrieve relevant chunks for answering queries.
+- Allow users to ask questions; the backend performs retrieval-augmented generation using Gemini.
+- Provide a way to generate a summarized report of findings.
+
+High-Level Architecture
+- Frontend: React (Vite) app served by Nginx.
+  - Nginx serves static files and proxies `/api/*` requests to the backend.
+  - At runtime the Nginx config is templated using environment variables (`API_URL`, `PORT`).
+- Backend: FastAPI application with routes for upload, documents, query, queries history, and report.
+  - Services:
+    - `llm_service.py`: wraps Google Gemini for text generation.
+    - `retrieval_service.py`: builds/queries embeddings and a vector index.
+    - `db_service.py`: SQLite persistence for documents and query history.
+- Storage:
+  - `uploads/`: raw files persisted for processing.
+  - `vector_db/`: vector index storage (Chroma-like artifacts).
+  - `database.db`: SQLite database for metadata and query logs.
+
+Key Directories and Files
+- `Backend/`
+  - `main.py`: FastAPI app bootstrap, CORS configuration, `/api` route prefix.
+  - `routes/`: API endpoints (`upload.py`, `documents.py`, `query.py`, `queries.py`, `report.py`).
+  - `services/`: core logic for LLM, retrieval, and database.
+  - `Dockerfile`: builds and runs the FastAPI service.
+- `Frontend/`
+  - `Dockerfile`: multi-stage build; serves `dist/` via Nginx.
+  - `nginx.conf`: template consumed via `envsubst` to inject `API_URL` and `PORT`.
+  - `src/`: React components, hooks, services.
+  - `vite.config.ts`: Vite build configuration.
+- `docker-compose.yml`: orchestrates frontend and backend locally; maps ports and volumes.
+
+Data Flow (Typical Query)
+1) User uploads a document via the frontend; file is sent to `/api/upload`.
+2) Backend stores the file, extracts text, computes embeddings, and updates the vector index and SQLite metadata.
+3) User enters a question; frontend POSTs `/api/query` with the prompt.
+4) Backend retrieves relevant chunks from the vector index, calls Gemini to generate an answer (RAG), stores the query & result in SQLite, and returns the answer.
+5) User can generate a report via `/api/report` (aggregated summary based on ingested content and prior queries).
+
+Core Features
+- Document upload and management.
+- Retrieval-augmented Q&A using Gemini.
+- Query history management.
+- Report generation from ingested content.
+- Frontend served over Nginx, with `/api` reverse proxy to backend.
+
+Environment Variables
+- Backend:
+  - `GEMINI_API_KEY`: required for Google Gemini access (set on Render and locally; do NOT commit real keys).
+- Frontend:
+  - `VITE_API_BASE_URL`: used when building the SPA; for containerized production we rely on Nginx `API_URL` at runtime.
+- Frontend container runtime (Nginx):
+  - `API_URL`: base URL of the backend (no `/api` suffix). Nginx proxies `/api/*` to `${API_URL}`.
+  - `PORT`: port Nginx listens on; defaults to `3000` locally; Render provides `$PORT`.
+
+API Endpoints (Backend `/api` prefix)
+- `POST /api/upload` — Upload a file for indexing.
+- `GET /api/documents` — List stored documents (may include metadata like titles, IDs).
+- `DELETE /api/documents/{id}` — Remove a document (if implemented).
+- `POST /api/query` — Ask a question; returns an answer and (optionally) supporting context.
+- `GET /api/queries` — Fetch recent queries/history.
+- `POST /api/report` — Generate a report/summary over ingested content.
+
+Local Development and Run
+- Prerequisites: Docker and Docker Compose.
+- Steps:
+  1) Set `GEMINI_API_KEY` in your environment or compose file.
+  2) Run `docker compose up --build`.
+  3) Frontend: `http://localhost:3000`.
+  4) Backend: `http://localhost:8000`.
+- Data persistence: volumes for `uploads`, `vector_db`, and `database.db` preserve state between runs.
+
+Render Deployment
+- Two web services:
+  - Backend (Python): start command `uvicorn main:app --host 0.0.0.0 --port $PORT`; set `GEMINI_API_KEY`.
+  - Frontend (Static via Nginx): runtime uses `API_URL` (backend base URL) and `PORT` (Render provides). No `/api` in `API_URL`.
+- CORS: `Backend/main.py` must include the exact frontend Render domain in `allow_origins`.
+- Free plan considerations: cold starts and limited resources may slow initial requests.
+
+Security and Privacy
+- Do not commit secret values (e.g., real `GEMINI_API_KEY`) to Git.
+- `.gitignore` excludes local artifacts (`uploads/`, `vector_db/`, `.devdbrc`, databases, binaries).
+- Consider adding rate limiting and basic auth if exposing publicly.
+
+Testing and Validation
+- Smoke tests in `Backend/tests/` validate basic API flows.
+- Manual checks: upload a sample PDF, ask queries, and verify the report endpoint.
+
+Troubleshooting
+- Frontend loads but API calls fail:
+  - Verify `API_URL` is set to backend base (no `/api` suffix).
+  - Check that Nginx displays the rendered config at container start (we log it).
+- CORS errors:
+  - Ensure your frontend domain (protocol + host) is listed in `allow_origins`.
+- Gemini errors:
+  - Confirm `GEMINI_API_KEY` is present and valid; check usage limits.
+- Render port issues:
+  - Ensure Nginx listens on `${PORT}`; default is `3000` locally.
+
+Limitations
+- Vector index and SQLite are local-file-based; not horizontally scalable.
+- No authentication/authorization layer by default.
+- Long-running LLM operations may be slow on free tiers.
+
+Future Enhancements
+- Switch persistence to managed services (Postgres, cloud vector DB).
+- Add authentication and user roles.
+- Background jobs for ingestion, summarization, and report generation.
+- Observability: structured logging, metrics, request tracing.
+- CI/CD: automated builds to container registry and deploy hooks.
+
+One-Paragraph Elevator Pitch
+Claims-Major1 lets you upload documents, indexes them for retrieval, and ask natural-language questions to produce accurate answers and reports using Google Gemini. It pairs a FastAPI backend with a React frontend, stores metadata in SQLite, and maintains a vector index for context-aware responses. Locally it runs via Docker Compose; on Render it deploys as two services with Nginx proxying `/api` to the backend. It is designed for straightforward ingestion, retrieval, Q&A, and reporting, with clean separation of concerns and simple configuration through environment variables.
